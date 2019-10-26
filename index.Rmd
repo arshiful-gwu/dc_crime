@@ -1,0 +1,626 @@
+---
+title: "DATS6101 Group Project: Crimes in the District"
+author: "Jada, Trinh, Jingrong, Srijon, Arshiful"
+date: "October 23, 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Chapter 1: Introduction
+
+
+When studying infrastructure and liveability of a city, crime is always one of the most important features asked about. Crime is also a sensitive issue when it comes to the District of Columbia. Owing largely to the crack epidemic in the mid 80s, D.C witnessed a a large influx of crimes all throughout the later decades and early 2000s, enough to earn the title of ‘murder capital.’ A policeman was quoted as saying that around 800-900 arrests were made every weekend. [Source] (https://wamu.org/story/14/01/27/crack_1/). 
+
+The Federal Bureau of Investigation (FBI) recently released the 2018 Crime in the United States annual report. This report shows that Washington, DC overall crime in 2018 has continued to decline. Mayor Muriel Bowser also recently launched the 2019 Safer Stronger DC Fall Crime Prevention Initiative, a collaborative program with the Metropolitan Police Department in place to reduce crime, using strategic prevention and focused enforcement in particular clusters throughout the District. As community members of Washington, DC we decided to research which clusters in the District Mayor Bowser should focus on and allocate the most available resources to reduce crime. 
+
+**“We know that when we focus our policing and resources in our hardest hit areas, we can make our neighborhoods safer,” said Mayor Bowser. “The Fall Crime Prevention Initiative will engage the community, particularly our young people and their families, to reduce violent crime and save lives.”**
+
+## Chapter 2: Description of Dataset
+
+For our project, we’ve chosen a dataset containing all the registered crimes in the district, as collected from (source)[http://crimemap.dc.gov] from the years 2008 to 2017. We downloaded this dataset from (source)[https://www.kaggle.com/vinchinzu/dc-metro-crime-data].  
+
+Since the dataset is a large one, with more than 300,000 values and thirty two features, we’ve cleaned the dataset to only include the years (2013- 2017) and features we’ve utilized in our study. Following is a list of the variables contained in our  dataset:
+
+* SHIFT
+
+* OFFENSE
+
+* DISTRICT
+
+* NEIGHBORHOOD_CLUSTER
+
+* CENSUS_TRACT
+
+* XBLOCK
+
+* YBLOCK
+
+* year
+
+* month
+
+* crimetype
+
+Reading in the data and taking a look at the structure:
+
+```{r, echo=F}
+data <- read.csv('dc_crime_add_vars.csv') #reading the csv file
+str(data) #dispolaying the structure of the data
+```
+
+We have `r nrow(data)` observations. That's quite a lot. We'll narrow the data down to five years for the purpose of our study. First, let's find out the starting and ending years for which registered crime is shown in the dataset.
+
+This dataset includes data from `r min(data$year)` to `r max(data$year)`. We want to subset the data to the last five recent years from 2013 to 2017.
+
+Subsetting the data and taking a look at its structure:
+
+```{r, echo=F}
+crime5yrs = subset(data, year > 2012) #subsetting the data to years after 2012
+str(crime5yrs) #disolaying the structure
+```
+
+We now have `r nrow(crime5yrs)` observations to work with.
+
+## Questions
+
+Our big question is: what are the concerns in terms of crime to DC residents? To answer the question, we explore three sub-questions:
+
+a. What type of offense happens the most and during which time of the day?
+
+b. Does crime happen more often at specific time of a year and what has been the trend of crime over the past few years?
+
+c. Which locations have seen the most crime and what are the characteristics?
+
+## 3. Exploratory Data Analysis
+
+## 3.1. What type of offense happens the most and during which time of the day?
+
+
+Table 1: The number of crimes we've observed at different shifts (day, evening, and midnight).
+
+```{r, echo=F}
+table1 = table(crime5yrs$SHIFT)
+table1
+```
+
+Plotting the table into a bar graph: 
+
+```{r, echo=F}
+plot(crime5yrs$SHIFT, main = 'Number of crimes at different shifts',
+     xlab = 'Shift', ylab = 'Frequency', col = c('blue', 'red', 'green')) #making the plot of the number of crimes
+```
+
+It looks like more crime was registered during the evening shift, followed by day time. The least number of crimes were registered after midnight.
+
+
+Table 2: We look at the number of offenses and methods using a contingency table.
+
+```{r, echo=F}
+table2 = table(crime5yrs$OFFENSE) #making the contingency table
+table2
+```
+
+Pie Chart for Offenses and Method: Plotting a pie plot for the number of offenses and the methods used:
+
+```{r, echo=F}
+pie(table(crime5yrs$OFFENSE), main = 'Pie Chart of Offenses', col = rainbow(9)) #plotting the pie chart
+```
+
+We notice that theft dominates the pie chart.
+
+Table 3: Displaying the number of offenses with the different methods registered in different shifts:
+
+```{r, echo=F}
+table3 = table(crime5yrs$SHIFT, crime5yrs$OFFENSE)
+table3
+```
+
+Barplot for table 3:
+
+```{r, echo=F}
+barplot(table3, col = c('blue', 'red', 'green'),beside=TRUE) #plotting the barplot
+legend('topleft', c('Day', 'Evening', 'Midnight'), fill = c('blue', 'red', 'green')) #adding alegend for the plot
+```
+
+We can now conclude that the first thing DC residents should be aware of is theft. According to our plot, Theft F/Auto and Theft/Others are the most common offenses. Theft F/Auto happens more often at day time, while Theft/Others happens more often at night time.
+
+**$Chi^{2}$  Test:**
+
+We want to find out whether the offenses and the methods used are independent of each other. For this we choose the $Chi^{2}$ test  and apply it on Table 3. We form the appropriate hypotheses:
+
+$H_O$: The offense and chosen method are independent of each other. 
+
+$H_A$: The offense and chosen method are dependent.
+
+Our chosen signifcance value is 0.05, indicating a 95% confidence interval.
+
+```{r, echo=F}
+chitest = chisq.test(table3)
+chitest
+```
+
+The result p-value from the $Chi^{2}$ test is small, so we reject the null hypothesis. Offenses and shifts are not independent.
+
+## 3.2. Does crime happen more often at a specific time of a year?
+ 
+ 
+ **3.2.1: Crimes registered over the specific time for a year:**
+
+Table 4: Creating and plotting a table for the crimes registered in every month for a span of five years:
+
+```{r, echo=F}
+table4 = table(crime5yrs$month)
+barplot(table4, main = 'Number of crimes each month', xlab = 'Month', ylab = 'Number of crimes', col = rainbow(12))
+```
+
+We can summarize that summer is the peak season for crimes. July and October have the highest number of crimes, and January has a high number of crimes as well. Crime tends to follow an upward curve over the months February to July. February has the least number of crimes, but it may be due to the fact that it has only 28 (29 at most) days.
+
+ 
+ **3.2.2 Lets look at the crime trend over the year.**
+
+```{r echo=FALSE, warning = F}
+library(data.table)
+library(ggplot2)
+library(stringr)
+library(dplyr)
+library(ggmap)
+
+crime5yrs$REPORT_DAT<- as.POSIXct(crime5yrs$REPORT_DAT, format = '%m/%d/%Y %H:%M')
+yearScale <- data.table( year = c(2013, 2014, 2015, 2016, 2017), count = as.numeric(0))
+
+#yearScale <- data.table( year = c(2011, 2012, 2013, 2014, 2015, 2016), count = as.numeric(0))
+
+yearScale$count[1] <- nrow( filter(crime5yrs, REPORT_DAT < as.POSIXct('2014/1/1') &  REPORT_DAT >= as.POSIXct('2013/1/1')) )
+yearScale$count[2] <- nrow( filter(crime5yrs, REPORT_DAT < as.POSIXct('2015/1/1') &  REPORT_DAT >= as.POSIXct('2014/1/1')) )
+yearScale$count[3] <- nrow( filter(crime5yrs, REPORT_DAT < as.POSIXct('2016/1/1') &  REPORT_DAT >= as.POSIXct('2015/1/1')) )
+yearScale$count[4] <- nrow( filter(crime5yrs, REPORT_DAT < as.POSIXct('2017/1/1') &  REPORT_DAT >= as.POSIXct('2016/1/1')) )
+yearScale$count[5] <- nrow( filter(crime5yrs, REPORT_DAT < as.POSIXct('2018/1/1') &  REPORT_DAT >= as.POSIXct('2017/1/1')) )
+
+g<- ggplot(yearScale, aes( x = year, y = count)) + geom_point(size=4) +  geom_smooth(se = FALSE)
+g <- g + ggtitle('Crime Trend') + labs(x = 'Year of Crimes', y = 'Count of Crime')
+print( g )
+
+```
+
+ **3.2.3: Year wise trend of individual crime:**
+
+```{r fig.align = 'center'}
+g2<- ggplot(crime5yrs, aes( factor(year), fill = factor(OFFENSE) )) + geom_bar(position = 'dodge')
+g2 <- g2 + guides(fill = guide_legend(title = 'Type of Crime')) + labs( x = 'Year', y = 'Frequency') + ggtitle('Crime Type By Year')
+print( g2 )
+```
+
+## 3.3. Which locations in DC should we be aware of?
+
+To look into this more, we'll need to clean our data a bit. We convert the DISTRICT column to a factor variable and remove the NA values and blank spaces from the dataset.
+
+```{r Q3_clean, include = F}
+crime5yrs$DISTRICT <- as.factor(crime5yrs$DISTRICT)
+#names(crime5yrs)[names(crime5yrs) == "NEIGHBORHOOD_CLUSTER"] <- "CLUSTER"
+crime5yrs_narm <- subset(crime5yrs, is.na(DISTRICT) == FALSE & NEIGHBORHOOD_CLUSTER != "" & is.na(crimetype) == FALSE)
+levels(crime5yrs_narm$NEIGHBORHOOD_CLUSTER) <- substring(levels(crime5yrs_narm$NEIGHBORHOOD_CLUSTER), first = 9)
+```
+
+ **3.3.1 Relationship between district and offence:**
+
+We perform a $Chi^{2}$ test to assess whether the methods of offense used and the district locations are independent.
+
+Forming the appropriate hypotheses:
+
+$H_O$: The methods of offense and the district locations are independent.
+
+$H_A$: The methods of offense and the district locations ar not independent.
+
+We've chosen a confidence level of 95% with an associated significance level of 0.05/
+
+
+Making the contingency table and performing the $Chi^{2}$ test:
+
+```{r, include = F}
+contable_DistOffence <- table(crime5yrs_narm$DISTRICT, crime5yrs_narm$OFFENSE)
+chitest_DO <- chisq.test(contable_DistOffence)
+```
+
+The resulting p value for the $Chi^{2}$ test is 2.2e-16. Since it's smaller than our chosen significance level, we reject the null hypothesis. The method of offense and the districts are thus not treated as independent by us.
+
+**Number of Crimes in Each District** 
+
+Plotting a barplot for the number of the crimes in each district with their counts:
+
+```{r CrimeDISTRICT, echo=F}
+library(ggplot2)
+ggplot(crime5yrs_narm, aes(x=DISTRICT, fill=DISTRICT))+
+  geom_bar()+
+  ggtitle("Number of crimes in each district")+
+  xlab("District")+
+  ylab("Number of crimes")+
+  geom_text(stat = 'count', aes(label=..count..), vjust=-0.25)
+```
+
+ Barplot,with the methods of offenses highlighted as well:
+
+```{r, echo=F}
+ggplot(data = crime5yrs_narm, aes(x=DISTRICT, fill=OFFENSE))+
+  geom_bar()+
+  ggtitle("Number of crimes in each district")+
+  xlab("District")+
+  ylab("Number of crimes")
+```
+
+
+
+Displaying and plotting the table for the number of crimes in every district in Washington, DC:
+
+```{r, echo=F}
+table_D1 <- table(crime5yrs_narm$DISTRICT, crime5yrs_narm$OFFENSE)
+table_D1
+```
+
+Violent and Non Violent Crimes in every district:
+
+We don't want to ignore the non-violent crimes and plot a table for non violent and violent crime counts observed in every district over the five years:
+
+```{r}
+ggplot(data = crime5yrs_narm, aes(x=DISTRICT, fill=crimetype))+
+  geom_bar()+
+  ggtitle("Number of Non-violent and violent crimes in each district")+
+  xlab("District")+
+  ylab("Number of crimes")+
+  geom_text(stat = 'count', aes(label=..count..), vjust=1)
+```
+
+It's clear that the non violent crimes outweighed the violent crimes in every district. District 6 seems to be the most dangerous when it comes to violent crimes while District 2 was the safest. District 1 and 2 are neck to neck with non violent crimes, with District 7 seeing the least amount of non violent crimes and a high amount of violence.
+
+
+ **3.3.2 We now look at the clusters of the District and ascertain whether the clusters and offenses are independent:**
+
+We use the $Chi^{2}$ test again. This has been our go-to for most of our project, since our dataset is mostly categorical variables. Once again, forming the hypotheses:
+
+$H_O$ - The clusters and the offenses are independent.
+
+$H_A$ - The clusters and the offenses are not independent.
+
+We've chosen a confidence level of 95% and a corresponding significance level of 0.05, for this test as well, and all the tests that follow.
+
+```{r, include=F}
+contable_ClusOffence <- table(crime5yrs_narm$DISTRICT, crime5yrs_narm$OFFENSE)
+chitest_CO <- chisq.test(contable_ClusOffence)
+```
+The resulting p value for the $Chi^{2}$ test is 2.2e-16. We thus reject the null hypothesis H$_O$. The variables are not independent.
+
+ Plotting clusters and number of crimes in a barplot:
+
+```{r CrimeCluster, echo=F}
+ggplot(crime5yrs_narm, aes(x=NEIGHBORHOOD_CLUSTER, fill=NEIGHBORHOOD_CLUSTER))+
+  geom_bar()+
+  ggtitle("Number of crimes in each cluster")+
+  xlab("Cluster")+
+  ylab("Number of crimes")+
+  geom_text(stat = 'count', aes(label=..count..))+
+  coord_flip()
+```
+
+It seems that Cluster 2 experiences a huge amount of crime while cluster 29 experienced an abysmal amount of the five years.
+
+Plotting the types of crimes in a barplot:
+
+```{r, echo=F}
+ggplot(data = crime5yrs_narm, aes(x=NEIGHBORHOOD_CLUSTER, fill=OFFENSE))+
+  geom_bar()+
+  ggtitle("Number of crimes in each cluster")+
+  xlab("Cluster")+
+  ylab("Number of crimes")+
+  coord_flip()
+```
+
+As expected (from our earlier tables) theft is the most common type of crime.
+
+We make a table for this as well to take a closer look:
+
+```{r, include=F}
+table_C1 <- table(crime5yrs_narm$NEIGHBORHOOD_CLUSTER, crime5yrs_narm$OFFENSE)
+table_C1
+```
+
+Looking at the violent and non violent crimes in every cluster using a bar plot:
+
+```{r, echo=F}
+ggplot(data = crime5yrs_narm, aes(x=NEIGHBORHOOD_CLUSTER, fill=crimetype))+
+  geom_bar()+
+  ggtitle("Number of Non-violent and violent crimes in each cluster")+
+  xlab("Cluster")+
+  ylab("Number of crimes")+
+  coord_flip()
+```
+
+Interestingly, albeit witnessing the highest amount crime (especially theft), cluster 2 has not seen the most amount violence. Cluster 39 witnessed the most amount of violence. Cluster 2 and 8 dominate the chart with regards to non violent crime, with cluster 29 having the least amount of non violenct crime and comparable low instances of violence as well. Clusters 12, 13, and 14 witnessed the least violence over the five years.
+
+Displaying the table in case we want to look at the numbers:
+
+```{r, include=F}
+table_C2 <- table(crime5yrs_narm$NEIGHBORHOOD_CLUSTER, crime5yrs_narm$crimetype)
+table_C2
+```
+
+### 3.3.3 HOMCIDE MAP
+
+We plot a homicide map for the crimes observed over the whole District in the five year span using the leaflet library: 
+
+```{r, echo=F}
+library(dplyr)
+library(leaflet)
+#data <- read.csv('1318Homicide.csv') # my laptop cannot take the burden for some reason thats why i subsetted it in excel prior to feeding it in this dataframe
+#lat_long_df<-select(data, )
+#lat_long_df<-subset(crime5yrs, select=c(YBLOCK, XBLOCK))
+
+homicide=crime5yrs[crime5yrs$OFFENSE == 'HOMICIDE',]
+
+homicide_lat_long_df<-subset(homicide, select=c(YBLOCK, XBLOCK))
+names(homicide_lat_long_df)[1] <- "lat"
+names(homicide_lat_long_df)[2] <- "lng"
+#str(homicide_lat_long_df)
+homicide_lat_long_df %>%
+  leaflet() %>%
+  addTiles() %>%
+  addMarkers()
+```
+
+
+### 3.3.4 Does the type of offense has an effect on the method used?
+
+To find out if the type of offense has an effect on the method used we again implement the $Chi^{2}$ test. First we make a contingency table for the method used and the offenses:
+
+```{r echo=FALSE}
+
+contable = table(crime5yrs$METHOD,crime5yrs$OFFENSE)
+contable
+
+
+```
+
+The hypotheses:
+
+H$_O$ - The method and offense are independent.
+
+H$_A$ -  The method and offense are not independent.
+
+```{r include=FALSE}
+
+chichi<-chisq.test(contable)
+chichi
+
+```
+
+We obtain a p-value of `r chichi$p.value` which is neglible when compared to our significance level. We reject the null hypothesis H$_O$ and assume that the offense does affect the method.
+
+
+
+
+x
+
+### 3.3.5 Is the number of crimes more or less the same in all the neighborhood clusters in our chosen span of five years? 
+
+####Plotting a boxplot for the number of crimes in the cluster:
+```{r echo = F}
+library(ggplot2)
+
+
+
+crime5yrs_nona_neightborhood <- crime5yrs[!(crime5yrs$NEIGHBORHOOD_CLUSTER == ""), ]
+crime_by_neighborhood_cluster_year<-table(crime5yrs_nona_neightborhood$NEIGHBORHOOD_CLUSTER, crime5yrs_nona_neightborhood$year)
+crime_by_neighborhood_cluster_year.df <- as.data.frame(crime_by_neighborhood_cluster_year)
+
+
+ggplot(crime_by_neighborhood_cluster_year.df, aes(x=Var1, y=Freq, fill=Var1)) + 
+    geom_boxplot(alpha=0.3) +
+    theme(legend.position="none")
+```
+
+To solve this question, we would ideally perform an Anova test on the data.
+
+Null hypothesis, H$_O$ : The number of crimes is the same in all the neighborhood clusters.
+
+Alternate Null Hypothesis, $H_A$: The number of crimes is not the same in all the neighborhood clusters.
+
+Before we proceed, however, there is a concern we need to take care of. The Anova test requires the assumption of noramlity in our data and our boxplot does not look very encouraging. Therefore to check, we applied qqnorm and shapiro wilk tests. As we suspected, data was not normal. 
+
+To avoid Type 1 and Type 2 error we increased the sample size to the actual size of the data set, now including observations from 2008 to 2017 and checked for noramlity again.
+
+
+```{r, echo = F}
+
+alldata_nona_neightborhood <- data[!(data$NEIGHBORHOOD_CLUSTER == ""), ]
+alldata_crime_by_neighborhood_cluster_year<-table(alldata_nona_neightborhood$NEIGHBORHOOD_CLUSTER, alldata_nona_neightborhood$year)
+alldata_crime_by_neighborhood_cluster_year = alldata_crime_by_neighborhood_cluster_year[-1,]
+alldata_crime_by_neighborhood_cluster_year.df <- as.data.frame(alldata_crime_by_neighborhood_cluster_year)
+
+
+
+qqnorm(alldata_crime_by_neighborhood_cluster_year.df$Freq)
+qqline(alldata_crime_by_neighborhood_cluster_year.df$Freq)
+
+shapiro.test(alldata_crime_by_neighborhood_cluster_year.df$Freq)
+
+
+```
+
+
+
+We applied qqnorm and shapiro wilk tests. From the shape of the qq plot and the p-value we obtained from the Shapiro Wilk test, it is evident that the data is still not normal. Looks like increasing the sample size did nothing. Nonetheless we were still very eager to perform the Anova just for the sake of it, if nothing else.
+
+
+
+On further research, we came across the One-Way-Anova Test.The one-way ANOVA is considered a robust test against the normality assumption. It tolerates violations to its normality assumption rather well and accepts data that is non-normal (skewed or kurtotic distributions) with only a small effect on the Type I error rate. [Source](https://statistics.laerd.com/statistical-guides/one-way-anova-statistical-guide-3.php)
+
+Thus, we performed the test.
+
+```{r echo = F}
+oneway_anova2<-aov(alldata_crime_by_neighborhood_cluster_year.df$Freq~alldata_crime_by_neighborhood_cluster_year.df$Var1)
+oneway_anova2
+summary(oneway_anova2)
+```
+
+
+Since we have 39 clusters the degrees of freedom is 38 and the p value obtained was 2e-16 which was neglible when compared to our critical value of 0.05. We rejected the null hypothesis H$_O$ and concluded that the the number of crime is NOT the same in all the neighborhood cluster from the years 2008 through 2017.
+
+It is very possible that we fell prey to huge Type I error!!
+
+
+### 3.3.6 Is the number of crime density more or less the same in all the neighborhood cluster in a span of five years (i.e. 2007-2018)?
+
+We saw in the above ANOVA analysis that the number of crime is NOT the same in all the neighborhood clusters.
+
+But is it the same case for the crime density of these clusters? Crime desity involves a new metric - the population. Luckily, we have the data for the population for every cluster included in our data set. The CENSUS_TRACT column contains this data. 
+
+The "Census Tract" is an area roughly equivalent to a neighborhood established by the Bureau of Census for analyzing populations. They generally encompass a population between 2,500 to 8,000 people Bureau of Census describes them as "relatively permanent", but they do change over time. Therefore in order to compile data on a certain neighborhood over several decades it will be necessary to figure out the correct tract number(s) for a given neighborhood every census year.
+[Source](https://libguides.lib.msu.edu/tracts)
+
+We introduce a new data frame with crime density included plot and perform normality tests on our data.
+
+```{r, echo = F}
+
+mean.df <- aggregate(CENSUS_TRACT ~ NEIGHBORHOOD_CLUSTER + year, alldata_nona_neightborhood, mean)
+
+
+#concatenating colums to be matched
+mean.df$con = paste(mean.df$NEIGHBORHOOD_CLUSTER, mean.df$year, sep="_")
+
+alldata_crime_by_neighborhood_cluster_year.df$con = paste(alldata_crime_by_neighborhood_cluster_year.df$Var1, alldata_crime_by_neighborhood_cluster_year.df$Var2, sep="_")
+
+df3<-merge(alldata_crime_by_neighborhood_cluster_year.df, mean.df, by.alldata_crime_by_neighborhood_cluster_year.df=c(con), by.mean.df=c(con),all=FALSE)
+
+#A crime rate is calculated by dividing the number of reported crimes by the total population; the result is multiplied by #100,000.
+
+df3$crime_rate<-df3$Freq/df3$CENSUS_TRACT*100000
+qqnorm(df3$crime_rate)
+qqline(df3$crime_rate)
+shapiro.test(df3$crime_rate)
+shapiro.test(df3$crime_rate)
+
+
+```
+
+On analysis, we find that our data is not normal. We thus choose to implement the One Way Anova Test again.
+
+
+Null Hypothesis: The crime density is  the same in all the neighborhood clusters.
+
+Alternative Hypothesis: The crime density differs across the neighborhood clusters.
+
+```{r echo = F}
+oneway_anova3<-aov(df3$crime_rate~df3$Var1)
+oneway_anova3
+summary(oneway_anova3)
+```
+
+
+Since we have 39 clusters, the degrees of freedom is 38. The obtained p-value is 2e-16 which is neglible when compared to our chosen significance level of 0.05. We reject the null hypothesis and say that the the crime rate is NOT the same throughout the neighborhood clusters.
+
+
+### 3.3.7 Lets look at a map of the number of crimes in DC Neighborhood clusters
+
+
+We plot a heat map using the leaflet library to see how crime is distributed across the neighborhood clusters.
+```{r echo =F}
+
+library(rgeos)
+library(maptools)
+library(rgdal)
+library(leaflet)
+library(htmltools)
+library(dplyr)
+
+#crime5yrs_nona_neightborhood<-subset(crime5yrs, (!is.na(NEIGHBORHOOD_CLUSTER)))
+
+#crime5yrs_nona_neightborhood<-na.omit(crime5yrs)
+
+#crime5yrs_nona_neightborhood <- crime5yrs[!(crime5yrs$NEIGHBORHOOD_CLUSTER == ""), ]
+crime_by_neighborhood_cluster<-group_by(crime5yrs_nona_neightborhood,NEIGHBORHOOD_CLUSTER)
+neighborhood_crime_count<-summarize(crime_by_neighborhood_cluster, crime_count=length(NEIGHBORHOOD_CLUSTER))
+neighborhood_crime_count
+
+New40<-data.frame("Cluster 40",0)
+names(New40)<-c("NEIGHBORHOOD_CLUSTER","crime_count")
+neighborhood_crime_count <- rbind(neighborhood_crime_count, New40)
+
+New41<-data.frame("Cluster 41",0)
+names(New41)<-c("NEIGHBORHOOD_CLUSTER","crime_count")
+neighborhood_crime_count <- rbind(neighborhood_crime_count, New41)
+
+New42<-data.frame("Cluster 42",0)
+names(New42)<-c("NEIGHBORHOOD_CLUSTER","crime_count")
+neighborhood_crime_count <- rbind(neighborhood_crime_count, New42)
+
+New43<-data.frame("Cluster 43",0)
+names(New43)<-c("NEIGHBORHOOD_CLUSTER","crime_count")
+neighborhood_crime_count <- rbind(neighborhood_crime_count, New43)
+
+New44<-data.frame("Cluster 44",0)
+names(New44)<-c("NEIGHBORHOOD_CLUSTER","crime_count")
+neighborhood_crime_count <- rbind(neighborhood_crime_count, New44)
+
+New45<-data.frame("Cluster 45",0)
+names(New45)<-c("NEIGHBORHOOD_CLUSTER","crime_count")
+neighborhood_crime_count <- rbind(neighborhood_crime_count, New45)
+
+New46<-data.frame("Cluster 46",0)
+names(New46)<-c("NEIGHBORHOOD_CLUSTER","crime_count")
+neighborhood_crime_count <- rbind(neighborhood_crime_count, New46)
+
+neighborhood_crime_count
+
+
+#library(gpclib)  # may be needed, may not be
+
+# MAP
+dcmap <- readOGR("Neighborhood_Clusters/Neighborhood_Clusters.shp")
+#dcmap
+dcmap<-subset(dcmap,is.element(neighborhood_crime_count$NEIGHBORHOOD_CLUSTER,dcmap$NAME))
+#dcmap
+
+neighborhood_crime_count<-neighborhood_crime_count[order(match(neighborhood_crime_count$NEIGHBORHOOD_CLUSTER,dcmap$NAME)),]
+#neighborhood_crime_count
+
+
+#min(neighborhood_crime_count$crime_count) 488
+#max(neighborhood_crime_count$crime_count) 14659
+
+bins=c(0,1840,3280,4720,6160,7600,9040,10480,11920,13360,14800)
+
+pal=colorBin("Blues",domain=neighborhood_crime_count$NEIGHBORHOOD_CLUSTER, bins = bins)
+
+labels<-paste("<p>",neighborhood_crime_count$NEIGHBORHOOD_CLUSTER,"</p>",
+              "<p>","No of Crimes:",neighborhood_crime_count$crime_count,"</p>",
+              sep = "")
+
+m<-leaflet()%>%
+  setView(-77,39,10)%>%
+  addProviderTiles(providers$Stamen.Toner)%>%  
+  addPolygons(data=dcmap,
+              weight=1,
+              smoothFactor = 0.2,
+              color="white",
+              fillOpacity = 0.8,
+              fillColor = pal(neighborhood_crime_count$crime_count),
+             # highlight = highlightOptions(
+              #  weight=5,
+               # color="#666666",
+                #dashArray = "",
+                #fillOpacity = 0.7,
+                #bringToFront = TRUE
+            #  ),
+              label = lapply(labels, HTML))
+
+m
+```
+
+## Chapter 4: Conclusion
+
+In conclusion, we recommend the most focus and resources be allocated to District 1-3 since these districts experienced the highest density of crime from 2013 and 2017. Overall cluster 2 has the highest number of crimes in total and cluster 39 has the highest number of violent crimes. While observing the dataset we noticed several relationships between variables such as neighborhood clusters, the types of crime, and the time of day crime occurred. The highest crime type for all five years is theft and the most popular time for crimes is during the evening. Overall cluster 2 has the highest number of crime in total and cluster 39 has the highest number of violent crimes.
+
